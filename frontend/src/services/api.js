@@ -1,81 +1,115 @@
 import axios from 'axios';
-import { API_CONFIG, ENDPOINTS } from '../constants/config';
-import { getAccessToken } from '../utils/storage';
 
-// Axios instance
+const BASE_URL = 'http://10.117.17.176:5000/api';
+
+const STORAGE_KEYS = {
+  access: 'sitego_access_token',
+  refresh: 'sitego_refresh_token',
+};
+
 const api = axios.create({
-  baseURL: API_CONFIG.BASE_URL,
-  timeout: API_CONFIG.TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: BASE_URL,
 });
 
-// Request interceptor - add auth token
-api.interceptors.request.use(
-  async (config) => {
-    const token = await getAccessToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    console.log('📤 API:', config.method.toUpperCase(), config.url);
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// Attach access token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem(STORAGE_KEYS.access);
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
-// Response interceptor - handle errors
+// Handle 401 → try refresh
+let isRefreshing = false;
+let pending = [];
+
+const processQueue = (error, token = null) => {
+  pending.forEach((p) => (error ? p.reject(error) : p.resolve(token)));
+  pending = [];
+};
+
 api.interceptors.response.use(
-  (response) => {
-    console.log('✅ API OK:', response.status);
-    return response;
-  },
+  (res) => res,
   async (error) => {
-    console.error('❌ API Error:', error.response?.status);
-    
-    // Handle 401 - token expired
-    if (error.response?.status === 401) {
-      // TODO: Implement refresh token logic
+    const original = error.config;
+    if (error.response?.status !== 401 || original._retry) {
+      return Promise.reject(error);
     }
-    
-    return Promise.reject(error);
+
+    const refreshToken = localStorage.getItem(STORAGE_KEYS.refresh);
+    if (!refreshToken) {
+      return Promise.reject(new Error('No refresh token'));
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        pending.push({ resolve, reject });
+      }).then((newToken) => {
+        original.headers.Authorization = `Bearer ${newToken}`;
+        return api(original);
+      });
+    }
+
+    original._retry = true;
+    isRefreshing = true;
+
+    try {
+      const res = await axios.post(`${BASE_URL}/auth/refresh`, {
+        refreshToken,
+      });
+      const newAccess = res.data.data.accessToken;
+      localStorage.setItem(STORAGE_KEYS.access, newAccess);
+      processQueue(null, newAccess);
+      original.headers.Authorization = `Bearer ${newAccess}`;
+      return api(original);
+    } catch (err) {
+      processQueue(err, null);
+      localStorage.removeItem(STORAGE_KEYS.access);
+      localStorage.removeItem(STORAGE_KEYS.refresh);
+      return Promise.reject(err);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
 
-// Auth API
+// exported API “services”
 export const authAPI = {
-  googleLogin: (token) => api.post(ENDPOINTS.AUTH.GOOGLE_LOGIN, { token }),
-  getCurrentUser: () => api.get(ENDPOINTS.AUTH.ME),
-  logout: () => api.post(ENDPOINTS.AUTH.LOGOUT),
+  googleLogin: (idToken) =>
+    api.post('/auth/google', { token: idToken }),
 };
 
-// Sites API
-export const sitesAPI = {
-  getMySites: () => api.get(ENDPOINTS.SITES.MY_SITES),
-  getAllSites: () => api.get(ENDPOINTS.SITES.ALL_SITES),
-};
-
-// Attendance API
-export const attendanceAPI = {
-  checkIn: (data) => api.post(ENDPOINTS.ATTENDANCE.CHECK_IN, data),
-  checkOut: (data) => api.post(ENDPOINTS.ATTENDANCE.CHECK_OUT, data),
-  getToday: () => api.get(ENDPOINTS.ATTENDANCE.TODAY),
-};
-
-// Materials API
 export const materialsAPI = {
-  scanMaterial: (data) => api.post(ENDPOINTS.MATERIALS.SCAN, data),
+  scan: (payload) => api.post('/materials/scan', payload),
+  getLogs: (siteId, params = {}) =>
+    api.get(`/materials/logs/${siteId}`, { params }),
 };
 
-// Reports API
-export const reportsAPI = {
-  createReport: (data) => api.post(ENDPOINTS.REPORTS.CREATE, data),
-  getMyReports: () => api.get(ENDPOINTS.REPORTS.MY_REPORTS),
-};
-
-// Issues API
 export const issuesAPI = {
-  createIssue: (data) => api.post(ENDPOINTS.ISSUES.CREATE, data),
+  getMy: (role) => api.get('/issues/my', { params: { role } }),
 };
+// src/services/api.js (add this)
+// src/services/api.js
+
+// ... existing imports and axios setup ...
+
+export const workerAPI = {
+  getTodayAttendance: () => api.get('/attendance/today'),
+  checkIn: (siteId, location) =>
+    api.post('/attendance/check-in', { siteId, location }),
+  checkOut: (location) =>
+    api.post('/attendance/check-out', { location }),
+};
+
+// keep existing exports here
+// src/services/api.js
+
+export const adminAPI = {
+  getUsers: () => api.get('/admin/users'),          // adjust to your real route
+  getSites: () => api.get('/sites'),                // adjust if different
+  getMaterials: () => api.get('/materials/master'), // you already have this controller
+  getOverview: () => api.get('/admin/overview'),    // optional, for dashboard
+};
+
 
 export default api;
+

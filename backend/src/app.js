@@ -34,7 +34,9 @@ const corsOptions = {
       'http://localhost:19006', // Expo default
       'http://localhost:19000', // Expo alternative
       'http://localhost:3000',  // React dev server
-      'http://localhost:8081',  // React Native metro
+      'http://localhost:8081',
+      'http://10.117.17.176:19006'
+      ,'http://10.117.17.176:8081'  // React Native metro
     ].filter(Boolean);
     
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
