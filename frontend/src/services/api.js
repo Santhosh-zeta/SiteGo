@@ -1,4 +1,6 @@
+// src/services/api.js
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BASE_URL = 'http://10.117.17.176:5000/api';
 
@@ -7,18 +9,18 @@ const STORAGE_KEYS = {
   refresh: 'sitego_refresh_token',
 };
 
-const api = axios.create({
-  baseURL: BASE_URL,
-});
+const api = axios.create({ baseURL: BASE_URL });
 
-// Attach access token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(STORAGE_KEYS.access);
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+// attach access token from AsyncStorage
+api.interceptors.request.use(async (config) => {
+  const token = await AsyncStorage.getItem(STORAGE_KEYS.access);
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
-// Handle 401 → try refresh
+// 401 → try refresh
 let isRefreshing = false;
 let pending = [];
 
@@ -35,10 +37,8 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const refreshToken = localStorage.getItem(STORAGE_KEYS.refresh);
-    if (!refreshToken) {
-      return Promise.reject(new Error('No refresh token'));
-    }
+    const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.refresh);
+    if (!refreshToken) return Promise.reject(new Error('No refresh token'));
 
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
@@ -57,14 +57,16 @@ api.interceptors.response.use(
         refreshToken,
       });
       const newAccess = res.data.data.accessToken;
-      localStorage.setItem(STORAGE_KEYS.access, newAccess);
+      await AsyncStorage.setItem(STORAGE_KEYS.access, newAccess);
       processQueue(null, newAccess);
       original.headers.Authorization = `Bearer ${newAccess}`;
       return api(original);
     } catch (err) {
       processQueue(err, null);
-      localStorage.removeItem(STORAGE_KEYS.access);
-      localStorage.removeItem(STORAGE_KEYS.refresh);
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.access,
+        STORAGE_KEYS.refresh,
+      ]);
       return Promise.reject(err);
     } finally {
       isRefreshing = false;
@@ -72,10 +74,10 @@ api.interceptors.response.use(
   }
 );
 
-// exported API “services”
+// APIs
+
 export const authAPI = {
-  googleLogin: (idToken) =>
-    api.post('/auth/google', { token: idToken }),
+  googleLogin: (idToken) => api.post('/auth/google', { token: idToken }),
 };
 
 export const materialsAPI = {
@@ -87,29 +89,30 @@ export const materialsAPI = {
 export const issuesAPI = {
   getMy: (role) => api.get('/issues/my', { params: { role } }),
 };
-// src/services/api.js (add this)
-// src/services/api.js
-
-// ... existing imports and axios setup ...
 
 export const workerAPI = {
   getTodayAttendance: () => api.get('/attendance/today'),
   checkIn: (siteId, location) =>
     api.post('/attendance/check-in', { siteId, location }),
-  checkOut: (location) =>
-    api.post('/attendance/check-out', { location }),
+  checkOut: (location) => api.post('/attendance/check-out', { location }),
 };
 
-// keep existing exports here
-// src/services/api.js
+// add to adminAPI in src/services/api.js
 
 export const adminAPI = {
-  getUsers: () => api.get('/admin/users'),          // adjust to your real route
-  getSites: () => api.get('/sites'),                // adjust if different
-  getMaterials: () => api.get('/materials/master'), // you already have this controller
-  getOverview: () => api.get('/admin/overview'),    // optional, for dashboard
+  // existing
+  getSites: () => api.get('/sites'),
+  createSite: (body) => api.post('/sites', body),
+  getMaterials: () => api.get('/materials/master'),
+  createMaterial: (body) => api.post('/materials/master', body),
+
+  // NEW: users
+  getUsers: () => api.get('/users'),
+  createUser: (body) => api.post('/users', body),
+  updateUser: (id, body) => api.put(`/users/${id}`, body),
+  updateUserRole: (id, role) => api.put(`/users/${id}/role`, { role }),
+  updateUserStatus: (id, status) => api.put(`/users/${id}/status`, { status }),
+  deleteUser: (id) => api.delete(`/users/${id}`),
 };
 
-
 export default api;
-

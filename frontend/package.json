@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "expo start",
+    "start": "node api.js && expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:css": "tailwindcss -i ./input.css -o ./output.css",
+    "build:css": "node api.js && tailwindcss -i ./input.css -o ./output.css",
     "watch:css": "tailwindcss -i ./input.css -o ./output.css --watch"
   },
   "dependencies": {
@@ -26,7 +26,7 @@
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "^2.29.1",
-    "react-native-maps": "1.20.1",
+    "react-native-maps": "^1.26.20",
     "react-native-paper": "^5.14.5",
     "react-native-permissions": "^5.4.4",
     "react-native-safe-area-context": "~5.6.0",

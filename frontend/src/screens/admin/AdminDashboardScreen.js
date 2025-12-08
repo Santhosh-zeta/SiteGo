@@ -5,24 +5,22 @@ import { Card, Text, Paragraph } from 'react-native-paper';
 const AdminDashboardScreen = () => (
   <ScrollView contentContainerStyle={styles.container}>
     <Card style={styles.card}>
-      <Card.Title title="Organization Overview" />
+      <Card.Title title="Admin Console" />
       <Card.Content>
-        <Text variant="headlineMedium">0 Active Sites</Text>
-        <Paragraph>Total workers, supervisors, and managers will show here.</Paragraph>
+        <Text variant="headlineMedium">Welcome, Admin</Text>
+        <Paragraph style={styles.subtitle}>
+          Use the tabs to manage materials and sites. User & analytics APIs can
+          be added later.
+        </Paragraph>
       </Card.Content>
     </Card>
 
     <Card style={styles.card}>
-      <Card.Title title="Open Issues" />
+      <Card.Title title="Key Areas" />
       <Card.Content>
-        <Paragraph>Escalated issues and analytics will appear here.</Paragraph>
-      </Card.Content>
-    </Card>
-
-    <Card style={styles.card}>
-      <Card.Title title="AI Quality Insights" />
-      <Card.Content>
-        <Paragraph>AI defect distribution and trends will be visualized here.</Paragraph>
+        <Paragraph>• Material Master – define materials & QR mapping.</Paragraph>
+        <Paragraph>• Sites – define sites and geofences (later via maps).</Paragraph>
+        <Paragraph>• Users – role management (backend not ready yet).</Paragraph>
       </Card.Content>
     </Card>
   </ScrollView>
@@ -31,6 +29,7 @@ const AdminDashboardScreen = () => (
 const styles = StyleSheet.create({
   container: { padding: 16, gap: 16 },
   card: { borderRadius: 12, elevation: 2 },
+  subtitle: { marginTop: 4, color: '#666' },
 });
 
 export default AdminDashboardScreen;
