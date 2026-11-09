@@ -16,13 +16,19 @@ import { authAPI } from '../services/api';
 
 WebBrowser.maybeCompleteAuthSession();
 
+const GOOGLE_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || 'not-configured.apps.googleusercontent.com';
+
 const LoginScreen = () => {
   const theme = useTheme();
   const { signIn } = useAuth();
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId:
-      '639843907861-l46qthj69pl54pndp08bgpnvb7v5q01c.apps.googleusercontent.com',
+    // A placeholder keeps the screen rendering when no client ID is configured.
+    clientId: GOOGLE_CLIENT_ID,
+    webClientId: GOOGLE_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || GOOGLE_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || GOOGLE_CLIENT_ID,
     scopes: ['openid', 'email', 'profile'],
     responseType: 'id_token',
   });
@@ -33,8 +39,6 @@ const LoginScreen = () => {
 
       const id_token =
         response?.params?.id_token || response?.authentication?.idToken;
-      console.log('GOOGLE RESPONSE', response);
-      console.log('ID TOKEN', id_token);
 
       if (!id_token) {
         Alert.alert('Error', 'No id_token from Google');

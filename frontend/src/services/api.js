@@ -2,7 +2,9 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'http://10.117.17.176:5000/api';
+import { API_CONFIG } from '../constants/config';
+
+const BASE_URL = API_CONFIG.BASE_URL;
 
 const STORAGE_KEYS = {
   access: 'sitego_access_token',

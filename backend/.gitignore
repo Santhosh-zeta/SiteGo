@@ -1,35 +1,4 @@
-# Dependencies
-node_modules/
-package-lock.json
-
-# Environment variables
+node_modules
 .env
-
-# Logs
 logs/
-*.log
-npm-debug.log*
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Build files
-dist/
-build/
-
-# Test coverage
 coverage/
-
-# AI Models (optional - these can be large)
-ai_models/*.h5
-ai_models/*.pb
-
-# Uploads (if storing locally)
-uploads/

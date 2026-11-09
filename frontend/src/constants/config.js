@@ -19,7 +19,7 @@ export const COLORS = {
 };
 
 export const API_CONFIG = {
-  BASE_URL: 'http://10.0.2.2:5000/api', // Android emulator
+  BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api',
   TIMEOUT: 30000,
 };
 
